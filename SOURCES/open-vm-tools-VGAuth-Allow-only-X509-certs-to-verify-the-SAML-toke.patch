@@ -1,0 +1,38 @@
+From c7c6fbdda8a524a7cbae9f1aa1842daac9ae8bcc Mon Sep 17 00:00:00 2001
+From: Miroslav Rezanina <mrezanin@redhat.com>
+Date: Thu, 7 Sep 2023 02:27:50 -0400
+Subject: [PATCH] VGAuth: Allow only X509 certs to verify the SAML token
+ signature.
+
+RH-Author: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Jira: RHEL-2414
+RH-CVE: CVE-2023-20900
+
+Signed-off-by: Miroslav Rezanina <mrezanin@redhat.com>
+---
+ open-vm-tools/vgauth/serviceImpl/saml-xmlsec1.c | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/open-vm-tools/vgauth/serviceImpl/saml-xmlsec1.c b/open-vm-tools/vgauth/serviceImpl/saml-xmlsec1.c
+index f5541a9a..0b2a945b 100644
+--- a/open-vm-tools/vgauth/serviceImpl/saml-xmlsec1.c
++++ b/open-vm-tools/vgauth/serviceImpl/saml-xmlsec1.c
+@@ -1335,7 +1335,14 @@ VerifySignature(xmlDocPtr doc,
+     */
+    bRet = RegisterID(xmlDocGetRootElement(doc), "ID");
+    if (bRet == FALSE) {
+-      g_warning("failed to register ID\n");
++      g_warning("Failed to register ID\n");
++      goto done;
++   }
++
++   /* Use only X509 certs to validate the signature */
++   if (xmlSecPtrListAdd(&(dsigCtx->keyInfoReadCtx.enabledKeyData),
++                        BAD_CAST xmlSecKeyDataX509Id) < 0) {
++      g_warning("Failed to limit allowed key data\n");
+       goto done;
+    }
+ 
+-- 
+2.39.3
+
