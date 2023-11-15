@@ -1,0 +1,427 @@
+From 69a92618674b1d4f0d08f5155810dca640503ca1 Mon Sep 17 00:00:00 2001
+From: Katy Feng <fkaty@vmware.com>
+Date: Tue, 22 Aug 2023 11:11:42 -0700
+Subject: [PATCH] Provide alternate method to allow (expected) pre-frozen
+ filesystems
+
+RH-Author: Ani Sinha <None>
+RH-MergeRequest: 28: Provide alternate method to allow (expected) pre-frozen filesystems when taking a quiesced snapshot.
+RH-Jira: RHEL-2447
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Vitaly Kuznetsov <vkuznets@redhat.com>
+RH-Acked-by: Jon Maloy <jmaloy@redhat.com>
+RH-Commit: [1/1] 2d0d52e87197ec16706d2c8d18117047d6def75b
+
+Effective with open-vm-tools 12.2.0, Linux quiesced snapshots will fail if
+any filesystem(s) have been prefrozen by other than the vmtoolsd process.
+This has been done to assure that filesystems are inactive while the
+snapshots are being taken. Some existing prefreeze scripts may be freezing
+some filesystem(s). In these cases, the vmtoolsd process must be informed of
+anticipated pre-frozen filesystems by providing an "excludedFileSystem" list in
+the [vmbackup] section of the tools.conf file.
+
+This change provides a new switch in the tools.conf file to allow pre-frozen
+filesystems to be encountered and accepted when doing a quiesced snapshot
+operation. With the default value of "false", the "ignoreFrozenFileSystems"
+can be configured with a setting of "true" to notify the quiesced snapshot
+operation that pre-frozen filesystems are allowed.
+
+(cherry picked from commit 60c3a80ddc2b400366ed05169e16a6bed6501da2)
+Signed-off-by: Ani Sinha <anisinha@redhat.com>
+---
+ open-vm-tools/lib/include/syncDriver.h        |  5 ++--
+ open-vm-tools/lib/syncDriver/nullDriver.c     | 10 +++++---
+ open-vm-tools/lib/syncDriver/syncDriverInt.h  | 14 +++++++----
+ .../lib/syncDriver/syncDriverLinux.c          | 25 ++++++++++++++-----
+ .../lib/syncDriver/syncDriverPosix.c          |  7 +++---
+ open-vm-tools/lib/syncDriver/vmSyncDriver.c   | 10 +++++---
+ .../services/plugins/vix/foundryToolsDaemon.c | 14 +++++++++--
+ .../services/plugins/vmbackup/stateMachine.c  |  8 ++++--
+ .../services/plugins/vmbackup/syncDriverOps.c |  5 ++--
+ .../services/plugins/vmbackup/vmBackupInt.h   | 19 ++++++++------
+ open-vm-tools/tools.conf                      | 23 +++++++++++++++++
+ 11 files changed, 103 insertions(+), 37 deletions(-)
+
+diff --git a/open-vm-tools/lib/include/syncDriver.h b/open-vm-tools/lib/include/syncDriver.h
+index 20712f66..8ef229d4 100644
+--- a/open-vm-tools/lib/include/syncDriver.h
++++ b/open-vm-tools/lib/include/syncDriver.h
+@@ -1,5 +1,5 @@
+ /*********************************************************
+- * Copyright (C) 2005-2018 VMware, Inc. All rights reserved.
++ * Copyright (c) 2005-2018, 2023 VMware, Inc. All rights reserved.
+  *
+  * This program is free software; you can redistribute it and/or modify it
+  * under the terms of the GNU Lesser General Public License as published
+@@ -51,7 +51,8 @@ typedef enum {
+ Bool SyncDriver_Init(void);
+ Bool SyncDriver_Freeze(const char *drives, Bool enableNullDriver,
+                        SyncDriverHandle *handle,
+-                       const char *excludedFileSystems);
++                       const char *excludedFileSystems,
++                       Bool ignoreFrozenFS);
+ Bool SyncDriver_Thaw(const SyncDriverHandle handle);
+ SyncDriverStatus SyncDriver_QueryStatus(const SyncDriverHandle handle,
+                                         int32 timeout);
+diff --git a/open-vm-tools/lib/syncDriver/nullDriver.c b/open-vm-tools/lib/syncDriver/nullDriver.c
+index 5e19e208..be96222a 100644
+--- a/open-vm-tools/lib/syncDriver/nullDriver.c
++++ b/open-vm-tools/lib/syncDriver/nullDriver.c
+@@ -1,5 +1,5 @@
+ /*********************************************************
+- * Copyright (C) 2011-2016 VMware, Inc. All rights reserved.
++ * Copyright (c) 2011-2016, 2023 VMware, Inc. All rights reserved.
+  *
+  * This program is free software; you can redistribute it and/or modify it
+  * under the terms of the GNU Lesser General Public License as published
+@@ -54,8 +54,9 @@ NullDriverClose(SyncDriverHandle handle)
+  *
+  * Calls sync().
+  *
+- * @param[in]  paths     Unused.
+- * @param[out] handle    Where to store the operation handle.
++ * @param[in]  paths            Unused.
++ * @param[out] handle           Where to store the operation handle.
++ * @param[in]  ignoreFrozenFS   Unused.
+  *
+  * @return A SyncDriverErr.
+  *
+@@ -64,7 +65,8 @@ NullDriverClose(SyncDriverHandle handle)
+ 
+ SyncDriverErr
+ NullDriver_Freeze(const GSList *paths,
+-                  SyncDriverHandle *handle)
++                  SyncDriverHandle *handle,
++                  Bool ignoreFrozenFS)
+ {
+    /*
+     * This is more of a "let's at least do something" than something that
+diff --git a/open-vm-tools/lib/syncDriver/syncDriverInt.h b/open-vm-tools/lib/syncDriver/syncDriverInt.h
+index 04f37bf2..a5706298 100644
+--- a/open-vm-tools/lib/syncDriver/syncDriverInt.h
++++ b/open-vm-tools/lib/syncDriver/syncDriverInt.h
+@@ -1,5 +1,5 @@
+ /*********************************************************
+- * Copyright (C) 2011-2017 VMware, Inc. All rights reserved.
++ * Copyright (c) 2011-2017, 2023 VMware, Inc. All rights reserved.
+  *
+  * This program is free software; you can redistribute it and/or modify it
+  * under the terms of the GNU Lesser General Public License as published
+@@ -41,7 +41,8 @@ typedef enum {
+ } SyncDriverErr;
+ 
+ typedef SyncDriverErr (*SyncFreezeFn)(const GSList *paths,
+-                                      SyncDriverHandle *handle);
++                                      SyncDriverHandle *handle,
++                                      Bool ignoreFrozenFs);
+ 
+ typedef struct SyncHandle {
+    SyncDriverErr (*thaw)(const SyncDriverHandle handle);
+@@ -55,15 +56,18 @@ typedef struct SyncHandle {
+ #if defined(__linux__)
+ SyncDriverErr
+ LinuxDriver_Freeze(const GSList *userPaths,
+-                   SyncDriverHandle *handle);
++                   SyncDriverHandle *handle,
++                   Bool ignoreFrozenFs);
+ 
+ SyncDriverErr
+ VmSync_Freeze(const GSList *userPaths,
+-              SyncDriverHandle *handle);
++              SyncDriverHandle *handle,
++              Bool ignoreFrozenFs);
+ 
+ SyncDriverErr
+ NullDriver_Freeze(const GSList *userPaths,
+-                  SyncDriverHandle *handle);
++                  SyncDriverHandle *handle,
++                  Bool ignoreFrozenFs);
+ #endif
+ 
+ #endif
+diff --git a/open-vm-tools/lib/syncDriver/syncDriverLinux.c b/open-vm-tools/lib/syncDriver/syncDriverLinux.c
+index 6d9a3568..4581098e 100644
+--- a/open-vm-tools/lib/syncDriver/syncDriverLinux.c
++++ b/open-vm-tools/lib/syncDriver/syncDriverLinux.c
+@@ -199,8 +199,9 @@ LinuxFiGetAttr(const SyncDriverHandle handle,   // IN (ignored)
+  * slow when guest is performing significant IO. Therefore, caller should
+  * consider running this function in a separate thread.
+  *
+- * @param[in]  paths    List of paths to freeze.
+- * @param[out] handle   Handle to use for thawing.
++ * @param[in]  paths           List of paths to freeze.
++ * @param[out] handle          Handle to use for thawing.
++ * @param[in]  ignoreFrozenFS  Switch to allow EBUSY error.
+  *
+  * @return A SyncDriverErr.
+  *
+@@ -209,7 +210,8 @@ LinuxFiGetAttr(const SyncDriverHandle handle,   // IN (ignored)
+ 
+ SyncDriverErr
+ LinuxDriver_Freeze(const GSList *paths,
+-                   SyncDriverHandle *handle)
++                   SyncDriverHandle *handle,
++                   Bool ignoreFrozenFS)
+ {
+    ssize_t count = 0;
+    Bool first = TRUE;
+@@ -324,9 +326,12 @@ LinuxDriver_Freeze(const GSList *paths,
+           * Previously, an EBUSY error was ignored, assuming that we may try
+           * to freeze the same superblock more than once depending on the
+           * OS configuration (e.g., usage of bind mounts).
+-          * Using the filesystem Id to check if this is a filesystem that we
+-          * have seen previously and will ignore this FD only if that is
+-          * the case.  Log a warning otherwise since the quiesced snapshot
++          * Use the filesystem Id to check if this filesystem has been
++          * handled before and, if so, ignore it.
++          * Alternatively, allow (ignore) the EBUSY if the
++          * "ignoreFrozenFileSystems" switch inside "vmbackup" section of
++          * tools.conf file is TRUE.
++          * Otherwise, log a warning as the quiesced snapshot
+           * attempt will fail.
+           */
+          if (ioctlerr == EBUSY) {
+@@ -339,6 +344,14 @@ LinuxDriver_Freeze(const GSList *paths,
+                 */
+                Debug(LGPFX "skipping path '%s' - previously frozen", path);
+                continue;
++            } else if (ignoreFrozenFS) {
++               /*
++                * Ignores the EBUSY error if the FS has been frozen by another
++                * process and the 'ignoreFrozenFileSystems' setting is
++                * turned on in tools.conf file.
++                */
++               Debug(LGPFX "Ignoring the frozen filesystem '%s'",path);
++               continue;
+             }
+             /*
+              * It appears that this FS has been locked or frozen by another
+diff --git a/open-vm-tools/lib/syncDriver/syncDriverPosix.c b/open-vm-tools/lib/syncDriver/syncDriverPosix.c
+index 7b6132ba..27369639 100644
+--- a/open-vm-tools/lib/syncDriver/syncDriverPosix.c
++++ b/open-vm-tools/lib/syncDriver/syncDriverPosix.c
+@@ -1,5 +1,5 @@
+ /*********************************************************
+- * Copyright (C) 2005-2019 VMware, Inc. All rights reserved.
++ * Copyright (c) 2005-2019, 2023 VMware, Inc. All rights reserved.
+  *
+  * This program is free software; you can redistribute it and/or modify it
+  * under the terms of the GNU Lesser General Public License as published
+@@ -456,7 +456,8 @@ Bool
+ SyncDriver_Freeze(const char *userPaths,              // IN
+                   Bool enableNullDriver,              // IN
+                   SyncDriverHandle *handle,           // OUT
+-                  const char *excludedFileSystems)    // IN
++                  const char *excludedFileSystems,    // IN
++                  Bool ignoreFrozenFS)                // IN
+ {
+    GSList *paths = NULL;
+    SyncDriverErr err = SD_UNAVAILABLE;
+@@ -517,7 +518,7 @@ SyncDriver_Freeze(const char *userPaths,              // IN
+          continue;
+       }
+ #endif
+-      err = freezeFn(paths, handle);
++      err = freezeFn(paths, handle, ignoreFrozenFS);
+    }
+ 
+    /*
+diff --git a/open-vm-tools/lib/syncDriver/vmSyncDriver.c b/open-vm-tools/lib/syncDriver/vmSyncDriver.c
+index 2bd0e886..a0d4a315 100644
+--- a/open-vm-tools/lib/syncDriver/vmSyncDriver.c
++++ b/open-vm-tools/lib/syncDriver/vmSyncDriver.c
+@@ -1,5 +1,5 @@
+ /*********************************************************
+- * Copyright (C) 2011-2016 VMware, Inc. All rights reserved.
++ * Copyright (c) 2011-2016, 2023 VMware, Inc. All rights reserved.
+  *
+  * This program is free software; you can redistribute it and/or modify it
+  * under the terms of the GNU Lesser General Public License as published
+@@ -91,8 +91,9 @@ VmSyncClose(SyncDriverHandle handle)
+  * Opens a description to the driver's proc node, and if successful, send an
+  * ioctl to freeze the requested filesystems.
+  *
+- * @param[in]  paths    List of paths to freeze.
+- * @param[out] handle   Where to store the handle to use for thawing.
++ * @param[in]  paths          List of paths to freeze.
++ * @param[out] handle         Where to store the handle to use for thawing.
++ * @param[in]  ignoreFrozenFS Unused.
+  *
+  * @return A SyncDriverErr.
+  *
+@@ -101,7 +102,8 @@ VmSyncClose(SyncDriverHandle handle)
+ 
+ SyncDriverErr
+ VmSync_Freeze(const GSList *paths,
+-              SyncDriverHandle *handle)
++              SyncDriverHandle *handle,
++              Bool ignoreFrozenFS)
+ {
+    int file;
+    Bool first = TRUE;
+diff --git a/open-vm-tools/services/plugins/vix/foundryToolsDaemon.c b/open-vm-tools/services/plugins/vix/foundryToolsDaemon.c
+index 7d45d3f5..079540f1 100644
+--- a/open-vm-tools/services/plugins/vix/foundryToolsDaemon.c
++++ b/open-vm-tools/services/plugins/vix/foundryToolsDaemon.c
+@@ -1,5 +1,5 @@
+ /*********************************************************
+- * Copyright (C) 2003-2021 VMware, Inc. All rights reserved.
++ * Copyright (c) 2003-2021, 2023 VMware, Inc. All rights reserved.
+  *
+  * This program is free software; you can redistribute it and/or modify it
+  * under the terms of the GNU Lesser General Public License as published
+@@ -545,6 +545,8 @@ ToolsDaemonTcloSyncDriverFreeze(RpcInData *data)
+    GKeyFile *confDictRef = ctx->config;
+    Bool enableNullDriver;
+    GSource *timer;
++   char *excludedFileSystems;
++   Bool ignoreFrozenFS;
+ 
+    /*
+     * Parse the arguments
+@@ -581,10 +583,18 @@ ToolsDaemonTcloSyncDriverFreeze(RpcInData *data)
+                                                "vmbackup",
+                                                "enableNullDriver",
+                                                FALSE);
++   excludedFileSystems = VMTools_ConfigGetString(confDictRef,
++                                                  "vmbackup",
++                                                  "excludedFileSystems",
++                                                  NULL);
++   ignoreFrozenFS = VMTools_ConfigGetBoolean(confDictRef,
++                                             "vmbackup",
++                                             "ignoreFrozenFileSystems",
++                                             FALSE);
+ 
+    /* Perform the actual freeze. */
+    if (!SyncDriver_Freeze(driveList, enableNullDriver, &gSyncDriverHandle,
+-                          NULL) ||
++                          excludedFileSystems, ignoreFrozenFS) ||
+        SyncDriver_QueryStatus(gSyncDriverHandle, INFINITE) != SYNCDRIVER_IDLE) {
+       g_warning("%s: Failed to Freeze drives '%s'\n",
+                 __FUNCTION__, driveList);
+diff --git a/open-vm-tools/services/plugins/vmbackup/stateMachine.c b/open-vm-tools/services/plugins/vmbackup/stateMachine.c
+index 99f52582..b04565d8 100644
+--- a/open-vm-tools/services/plugins/vmbackup/stateMachine.c
++++ b/open-vm-tools/services/plugins/vmbackup/stateMachine.c
+@@ -1073,9 +1073,13 @@ VmBackupStartCommon(RpcInData *data,
+ #if defined(__linux__)
+    gBackupState->excludedFileSystems =
+          VMBACKUP_CONFIG_GET_STR(ctx->config, "excludedFileSystems", NULL);
+-   g_debug("Using excludedFileSystems = \"%s\"\n",
++   gBackupState->ignoreFrozenFS =
++       VMBACKUP_CONFIG_GET_BOOL(ctx->config, "ignoreFrozenFileSystems", FALSE);
++
++   g_debug("Using excludedFileSystems = \"%s\", ignoreFrozenFileSystems = %d\n",
+            (gBackupState->excludedFileSystems != NULL) ?
+-            gBackupState->excludedFileSystems : "(null)");
++            gBackupState->excludedFileSystems : "(null)",
++           gBackupState->ignoreFrozenFS);
+ #endif
+    g_debug("Quiescing volumes: %s",
+            (gBackupState->volumes) ? gBackupState->volumes : "(null)");
+diff --git a/open-vm-tools/services/plugins/vmbackup/syncDriverOps.c b/open-vm-tools/services/plugins/vmbackup/syncDriverOps.c
+index cc01d294..a090ec72 100644
+--- a/open-vm-tools/services/plugins/vmbackup/syncDriverOps.c
++++ b/open-vm-tools/services/plugins/vmbackup/syncDriverOps.c
+@@ -1,5 +1,5 @@
+ /*********************************************************
+- * Copyright (C) 2007-2019, 2021 VMware, Inc. All rights reserved.
++ * Copyright (C) 2007-2019, 2021, 2023 VMware, Inc. All rights reserved.
+  *
+  * This program is free software; you can redistribute it and/or modify it
+  * under the terms of the GNU Lesser General Public License as published
+@@ -276,7 +276,8 @@ VmBackupNewDriverOp(VmBackupState *state,       // IN
+                                      useNullDriverPrefs ?
+                                         state->enableNullDriver : FALSE,
+                                      op->syncHandle,
+-                                     state->excludedFileSystems);
++                                     state->excludedFileSystems,
++                                     state->ignoreFrozenFS);
+          break;
+       case OP_THAW:
+          op->manifest = SyncNewManifest(state, *op->syncHandle);
+diff --git a/open-vm-tools/services/plugins/vmbackup/vmBackupInt.h b/open-vm-tools/services/plugins/vmbackup/vmBackupInt.h
+index 0c912174..65e2e552 100644
+--- a/open-vm-tools/services/plugins/vmbackup/vmBackupInt.h
++++ b/open-vm-tools/services/plugins/vmbackup/vmBackupInt.h
+@@ -1,5 +1,5 @@
+ /*********************************************************
+- * Copyright (C) 2008-2019 VMware, Inc. All rights reserved.
++ * Copyright (c) 2008-2019, 2023 VMware, Inc. All rights reserved.
+  *
+  * This program is free software; you can redistribute it and/or modify it
+  * under the terms of the GNU Lesser General Public License as published
+@@ -100,18 +100,22 @@ struct VmBackupSyncCompleter;
+  * Don't modify the fields directly - rather, use VmBackup_SetCurrentOp,
+  * which does most of the handling needed by users of the state machine.
+  *
+- * NOTE: The thread for freeze operation modifies currentOp in BackupState
+- *       which is also accessed by the AsyncCallback driving the state
+- *       machine (run by main thread). Also, gcc might generate two
+- *       instructions for writing a 64-bit value. Therefore, protect the
+- *       access to currentOp and related fields using opLock mutex.
++ * NOTE 1: The thread for freeze operation modifies currentOp in BackupState
++ *         which is also accessed by the AsyncCallback driving the state
++ *         machine (run by main thread). Also, gcc might generate two
++ *         instructions for writing a 64-bit value. Therefore, protect the
++ *         access to currentOp and related fields using opLock mutex.
++ *
++ * NOTE 2: Only used by Linux guests, ignored on Windows guests and is
++ *         initialized to "false" when the VmBackupState is initialized
++ *         at the start of a backup operation.
+  */
+ 
+ typedef struct VmBackupState {
+    ToolsAppCtx   *ctx;
+    VmBackupOp    *currentOp;
+    const char    *currentOpName;
+-   GMutex         opLock;          // See note above
++   GMutex         opLock;          // See note 1 above
+    char          *volumes;
+    char          *snapshots;
+    guint          pollPeriod;
+@@ -127,6 +131,7 @@ typedef struct VmBackupState {
+    Bool           allowHWProvider;
+    Bool           execScripts;
+    Bool           enableNullDriver;
++   Bool           ignoreFrozenFS;   // See note 2 above
+    Bool           needsPriv;
+    gchar         *scriptArg;
+    guint          timeout;
+diff --git a/open-vm-tools/tools.conf b/open-vm-tools/tools.conf
+index e5a03a9c..f238cb59 100644
+--- a/open-vm-tools/tools.conf
++++ b/open-vm-tools/tools.conf
+@@ -395,6 +395,29 @@
+ 
+ #excludedFileSystems=
+ 
++# Linux:
++# It is possible that filesystems are being frozen in pre-freeze scripts
++# to control the order in which those specific filesystems are to be frozen.
++# The vmtoolsd process must be informed of all such filesystems with the help
++# of "excludedFileSystems" setting of tools.conf.
++#
++# A temporary workaround is available (starting from 12.3.0) for admins to allow
++# quiesceing operation to succeed until the "excludedFileSystems" list
++# is configured.
++#
++# If another process thaws the file system while a quiescing operation
++# operation is ongoing, the snapshot may be compromised. Once the
++# "excludedFileSystems" list is configured this setting MUST be unset (or set
++# to false).
++#
++# The value of ignoreFrozenFileSystems is a true or false; the default is
++# false.
++#
++# Set to true to ignore pre-frozen file systems during the quiescing operation.
++#
++# ignoreFrozenFileSystems is Linux only (Not supported on Windows).
++#ignoreFrozenFileSystems=false
++
+ # execScripts specifies whether to execute scripts as part of the quiescing
+ # operation. Scripts are executed from the scripts directory along with the
+ # legacy scripts.
+-- 
+2.37.3
+
