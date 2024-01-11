@@ -1,5 +1,5 @@
 ################################################################################
-### Copyright 2013-2021 VMware, Inc.  All rights reserved.
+### Copyright 2013-2023 VMware, Inc.  All rights reserved.
 ###
 ### RPM SPEC file for building open-vm-tools packages.
 ###
@@ -19,9 +19,9 @@
 ################################################################################
 
 %global _hardened_build 1
-%global majorversion    12.1
+%global majorversion    12.2
 %global minorversion    5
-%global toolsbuild      20735119
+%global toolsbuild      21855600
 %global toolsversion    %{majorversion}.%{minorversion}
 %global toolsdaemon     vmtoolsd
 %global vgauthdaemon    vgauthd
@@ -32,7 +32,7 @@
 
 Name:             open-vm-tools
 Version:          %{toolsversion}
-Release:          2%{?dist}.3
+Release:          3%{?dist}
 Summary:          Open Virtual Machine Tools for virtual machines hosted on VMware
 License:          GPLv2
 URL:              https://github.com/vmware/%{name}
@@ -44,12 +44,6 @@ Source3:          run-vmblock\x2dfuse.mount
 Source4:          open-vm-tools.conf
 Source5:          vmtoolsd.pam
 
-# For bz#2217083 - [CISA Major Incident] CVE-2023-20867 open-vm-tools: authentication bypass vulnerability in the vgauth module [rhel-8.8.0.z]
-Patch1: ovt-Remove-some-dead-code.patch
-# For bz#2229158 - [ESXi] [RHEL8] vmtoolsd task gets blocked in the uninterruptible state while attempting to delete a manifest file 'quiesce_manifest.xml' on a frozen file system [rhel-8.8.0.z]
-Patch2: ovt-Track-Linux-filesystem-id-FSID-for-quiesced-frozen-f.patch
-# For RHEL-3073 - CVE-2023-20900 open-vm-tools: SAML token signature bypass [rhel-8.8.0.z]
-Patch3: ovt-VGAuth-Allow-only-X509-certs-to-verify-the-SAML-toke.patch
 
 %if 0%{?rhel} >= 7
 ExclusiveArch:    x86_64
@@ -57,7 +51,11 @@ ExclusiveArch:    x86_64
 ExclusiveArch:    %{ix86} x86_64 aarch64
 %endif
 
-#Patch0: name.patch
+# Patch0: name.patch
+# For bz#2236543 - CVE-2023-20900 open-vm-tools: SAML token signature bypass [rhel-8]
+Patch1: ovt-VGAuth-Allow-only-X509-certs-to-verify-the-SAML-toke.patch
+# For RHEL-2447 - [RHEL8.9][ESXi]Latest version of open-vm-tools breaks VM backups
+Patch2: ovt-Provide-alternate-method-to-allow-expected-pre-froze.patch
 
 BuildRequires:    autoconf
 BuildRequires:    automake
@@ -416,20 +414,32 @@ fi
 %{_bindir}/vmware-vgauth-smoketest
 
 %changelog
-* Tue Sep 12 2023 Miroslav Rezanina <mrezanin@redhat.com> - 12.1.5-2.el8_8.3
-- ovt-VGAuth-Allow-only-X509-certs-to-verify-the-SAML-toke.patch [RHEL-3073]
-- Resolves: RHEL-3073
-  (CVE-2023-20900 open-vm-tools: SAML token signature bypass [rhel-8.8.0.z])
+* Thu Sep 28 2023 Jon Maloy <jmaloy@redhat.com> - 12.2.5-3.el8_9
+- ovt-Provide-alternate-method-to-allow-expected-pre-froze.patch [RHEL-2447]
+- Resolves: RHEL-2447
+  ([RHEL8.9][ESXi]Latest version of open-vm-tools breaks VM backups)
 
-* Wed Aug 09 2023 Jon Maloy <jmaloy@redhat.com> - 12.1.5-2.el8_8.2
-- ovt-Track-Linux-filesystem-id-FSID-for-quiesced-frozen-f.patch [bz#2229158]
-- Resolves: bz#2229158
-  ([ESXi] [RHEL8] vmtoolsd task gets blocked in the uninterruptible state while attempting to delete a manifest file 'quiesce_manifest.xml' on a frozen file system [rhel-8.8.0.z])
+* Sun Sep 17 2023 Miroslav Rezanina <mrezanin@redhat.com> - 12.2.5-2.el8_9
+- ovt-VGAuth-Allow-only-X509-certs-to-verify-the-SAML-toke.patch [bz#2236543]
+- Resolves: bz#2236543
+  (CVE-2023-20900 open-vm-tools: SAML token signature bypass [rhel-8])
 
-* Mon Jun 26 2023 Jon Maloy <jmaloy@redhat.com> - 12.1.5-2
-- ovt-Remove-some-dead-code.patch [bz#2217083]
-- Resolves: bz#2217083
-  ([CISA Major Incident] CVE-2023-20867 open-vm-tools: authentication bypass vulnerability in the vgauth module [rhel-8.8.0.z])
+* Tue Jul 11 2023 Miroslav Rezanina <mrezanin@redhat.com> - 12.2.5-1
+- Rebase to open-vm-tools 12.2.5 [bz#2214861]
+- Resolves: bz#2214861
+  ([ESXi][RHEL8]open-vm-tools version 12.2.5 has been released - please rebase)
+- Resolves: bz#2216415
+  ([ESXi][RHEL8] URL in service unit files are started from http instead of https)
+
+* Wed Jun 28 2023 Jon Maloy <jmaloy@redhat.com> - 12.2.0-3
+- ovt-Remove-some-dead-code.patch [bz#2215563]
+- Resolves: bz#2215563
+  ([CISA Major Incident] CVE-2023-20867 open-vm-tools: authentication bypass vulnerability in the vgauth module [rhel-8])
+
+* Wed May 03 2023 Miroslav Rezanina <mrezanin@redhat.com> - 12.2.0-1
+- Rebase to open-vm-tools 12.2.0 [bz#2177068]
+- Resolves: bz#2177068
+  ([ESXi][RHEL8]open-vm-tools version 12.2.0 has been released - please rebase)
 
 * Fri Dec 09 2022 Miroslav Rezanina <mrezanin@redhat.com> 12.1.5-1
 - Rebase to open-vm-tools 12.1.5 [bz#2150188]

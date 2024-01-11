@@ -1,11 +1,11 @@
-From 0b99aa2b03e076452fdb61db189b0fd6ad399e63 Mon Sep 17 00:00:00 2001
+From a839cb975d58968237bd871b1fb4cbe191af085b Mon Sep 17 00:00:00 2001
 From: Miroslav Rezanina <mrezanin@redhat.com>
 Date: Thu, 7 Sep 2023 02:27:50 -0400
 Subject: [PATCH] VGAuth: Allow only X509 certs to verify the SAML token
  signature.
 
 RH-Author: Miroslav Rezanina <mrezanin@redhat.com>
-RH-Jira: RHEL-3073
+RH-Bugzilla: 2236543
 RH-CVE: CVE-2023-20900
 
 Signed-off-by: Miroslav Rezanina <mrezanin@redhat.com>
