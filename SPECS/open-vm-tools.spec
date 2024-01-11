@@ -1,5 +1,5 @@
 ################################################################################
-### Copyright 2013-2021 VMware, Inc.  All rights reserved.
+### Copyright 2013-2023 VMware, Inc.  All rights reserved.
 ###
 ### RPM SPEC file for building open-vm-tools packages.
 ###
@@ -19,9 +19,9 @@
 ################################################################################
 
 %global _hardened_build 1
-%global majorversion    12.1
+%global majorversion    12.2
 %global minorversion    5
-%global toolsbuild      20735119
+%global toolsbuild      21855600
 %global toolsversion    %{majorversion}.%{minorversion}
 %global toolsdaemon     vmtoolsd
 %global vgauthdaemon    vgauthd
@@ -32,7 +32,7 @@
 
 Name:             open-vm-tools
 Version:          %{toolsversion}
-Release:          1%{?dist}.3
+Release:          3%{?dist}
 Summary:          Open Virtual Machine Tools for virtual machines hosted on VMware
 License:          GPLv2
 URL:              https://github.com/vmware/%{name}
@@ -52,11 +52,10 @@ ExclusiveArch:    %{ix86} x86_64 aarch64
 %endif
 
 #Patch0: name.patch
-Patch1: ovt-Remove-some-dead-code.patch
-# For bz#2229160 - [ESXi] [RHEL 9 Beta]vmtoolsd task gets blocked in the uninterruptible state while attempting to delete a manifest file 'quiesce_manifest.xml' on a frozen file system [rhel-9.2.0.z]
-Patch2: ovt-Track-Linux-filesystem-id-FSID-for-quiesced-frozen-f.patch
-# For RHEL-2414 - CVE-2023-20900 open-vm-tools: SAML token signature bypass [rhel-9.2.0.z]
-Patch3: open-vm-tools-VGAuth-Allow-only-X509-certs-to-verify-the-SAML-toke.patch
+# For bz#2236544 - CVE-2023-20900 open-vm-tools: SAML token signature bypass [rhel-9]
+Patch1: ovt-VGAuth-Allow-only-X509-certs-to-verify-the-SAML-toke.patch
+# For RHEL-2446 - [RHEL9.3][ESXi]Latest version of open-vm-tools breaks VM backups
+Patch2: ovt-Provide-alternate-method-to-allow-expected-pre-froze.patch
 
 BuildRequires:    autoconf
 BuildRequires:    automake
@@ -414,20 +413,35 @@ fi
 %files test
 %{_bindir}/vmware-vgauth-smoketest
 %changelog
-* Thu Sep 07 2023 Miroslav Rezanina <mrezanin@redhat.com> - 12.1.5-1.el9_2.3
-- open-vm-tools-VGAuth-Allow-only-X509-certs-to-verify-the-SAML-toke.patch [RHEL-2414]
-- Resolves: RHEL-2414
-  (CVE-2023-20900 open-vm-tools: SAML token signature bypass [rhel-9.2.0.z])
+* Fri Sep 22 2023 Miroslav Rezanina <mrezanin@redhat.com> - 12.2.5-3
+- ovt-Provide-alternate-method-to-allow-expected-pre-froze.patch [RHEL-2446]
+- Resolves: RHEL-2446
+  ([RHEL9.3][ESXi]Latest version of open-vm-tools breaks VM backups)
 
-* Mon Aug 14 2023 Miroslav Rezanina <mrezanin@redhat.com> - 12.1.5-1.el9_2.2
-- ovt-Track-Linux-filesystem-id-FSID-for-quiesced-frozen-f.patch [bz#2229160]
-- Resolves: bz#2229160
-  ([ESXi] [RHEL 9 Beta]vmtoolsd task gets blocked in the uninterruptible state while attempting to delete a manifest file 'quiesce_manifest.xml' on a frozen file system [rhel-9.2.0.z])
+* Fri Sep 08 2023 Miroslav Rezanina <mrezanin@redhat.com> - 12.2.5-2
+- ovt-VGAuth-Allow-only-X509-certs-to-verify-the-SAML-toke.patch [bz#2236544]
+- Resolves: bz#2236544
+  (CVE-2023-20900 open-vm-tools: SAML token signature bypass [rhel-9])
 
-* Mon Jun 26 2023 Miroslav Rezanina <mrezanin@redhat.com> - 12.1.5-1.el9_2.1
-- ovt-Remove-some-dead-code.patch [bz#2217081]
-- Resolves: bz#2217081
-  ([CISA Major Incident] CVE-2023-20867 open-vm-tools: authentication bypass vulnerability in the vgauth module [rhel-9.2.0.z])
+* Mon Jul 10 2023 Miroslav Rezanina <mrezanin@redhat.com> - 12.2.5-1
+- Rebaer to open-vm-tools 12.2.5
+- Resolves: bz#2214862
+  ([ESXi][RHEL9]open-vm-tools version 12.2.5 has been released - please rebase)
+
+* Tue Jun 27 2023 Miroslav Rezanina <mrezanin@redhat.com> - 12.2.0-3
+- ovt-Remove-some-dead-code.patch [bz#2215566]
+- Resolves: bz#2215566
+  ([CISA Major Incident] CVE-2023-20867 open-vm-tools: authentication bypass vulnerability in the vgauth module [rhel-br-9])
+
+* Tue Jun 20 2023 Miroslav Rezanina <mrezanin@redhat.com> - 12.2.0-2
+- ovt-Use-https-instead-of-http-for-documentation-links.patch [bz#2208160]
+- Resolves: bz#2208160
+  ([ESXi][RHEL9] URL in service unit files are started from http instead of https)
+
+* Wed May 03 2023 Miroslav Rezanina <mrezanin@redhat.com> - 12.2.0-1
+- Rebase to open-vm-tools 12.2.0 [bz#2177086]
+- Resolves: bz#2177086
+  ([ESXi][RHEL9]open-vm-tools version 12.2.0 has been released - please rebase)
 
 * Fri Dec 09 2022 Miroslav Rezanina <mrezanin@redhat.com> - 12.1.5-1
 - Rebase to open-vm-tools 12.1.5 [bz#2150190]
