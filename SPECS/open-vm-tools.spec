@@ -32,7 +32,7 @@
 
 Name:             open-vm-tools
 Version:          %{toolsversion}
-Release:          3%{?dist}
+Release:          3%{?dist}.2
 Summary:          Open Virtual Machine Tools for virtual machines hosted on VMware
 License:          GPLv2
 URL:              https://github.com/vmware/%{name}
@@ -56,6 +56,10 @@ ExclusiveArch:    %{ix86} x86_64 aarch64
 Patch1: ovt-VGAuth-Allow-only-X509-certs-to-verify-the-SAML-toke.patch
 # For RHEL-2446 - [RHEL9.3][ESXi]Latest version of open-vm-tools breaks VM backups
 Patch2: ovt-Provide-alternate-method-to-allow-expected-pre-froze.patch
+# For RHEL-14686 - CVE-2023-34059 open-vm-tools: file descriptor hijack vulnerability in the vmware-user-suid-wrapper [rhel-9.3.0]
+Patch3: ovt-File-descriptor-vulnerability-in-the-open-vm-tools-v.patch
+# For RHEL-14652 - CVE-2023-34058 open-vm-tools: SAML token signature bypass [rhel-9.3.0]
+Patch4: ovt-Don-t-accept-tokens-with-unrelated-certs.patch
 
 BuildRequires:    autoconf
 BuildRequires:    automake
@@ -413,6 +417,14 @@ fi
 %files test
 %{_bindir}/vmware-vgauth-smoketest
 %changelog
+* Thu Nov 02 2023 Miroslav Rezanina <mrezanin@redhat.com> - 12.2.5-3.el9_3.2
+- ovt-File-descriptor-vulnerability-in-the-open-vm-tools-v.patch [RHEL-14686]
+- ovt-Don-t-accept-tokens-with-unrelated-certs.patch [RHEL-14652]
+- Resolves: RHEL-14686
+  (CVE-2023-34059 open-vm-tools: file descriptor hijack vulnerability in the vmware-user-suid-wrapper [rhel-9.3.0])
+- Resolves: RHEL-14652
+  (CVE-2023-34058 open-vm-tools: SAML token signature bypass [rhel-9.3.0])
+
 * Fri Sep 22 2023 Miroslav Rezanina <mrezanin@redhat.com> - 12.2.5-3
 - ovt-Provide-alternate-method-to-allow-expected-pre-froze.patch [RHEL-2446]
 - Resolves: RHEL-2446
