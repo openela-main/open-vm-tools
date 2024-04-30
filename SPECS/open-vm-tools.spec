@@ -18,10 +18,9 @@
 ### Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ################################################################################
 
-%global _hardened_build 1
-%global majorversion    12.2
+%global majorversion    12.3
 %global minorversion    5
-%global toolsbuild      21855600
+%global toolsbuild      22544099
 %global toolsversion    %{majorversion}.%{minorversion}
 %global toolsdaemon     vmtoolsd
 %global vgauthdaemon    vgauthd
@@ -32,7 +31,7 @@
 
 Name:             open-vm-tools
 Version:          %{toolsversion}
-Release:          3%{?dist}.2
+Release:          2%{?dist}
 Summary:          Open Virtual Machine Tools for virtual machines hosted on VMware
 License:          GPLv2
 URL:              https://github.com/vmware/%{name}
@@ -44,22 +43,14 @@ Source3:          run-vmblock\x2dfuse.mount
 Source4:          open-vm-tools.conf
 Source5:          vmtoolsd.pam
 
-
 %if 0%{?rhel} >= 7
 ExclusiveArch:    x86_64 aarch64
 %else
 ExclusiveArch:    %{ix86} x86_64 aarch64
 %endif
 
-#Patch0: name.patch
-# For bz#2236544 - CVE-2023-20900 open-vm-tools: SAML token signature bypass [rhel-9]
-Patch1: ovt-VGAuth-Allow-only-X509-certs-to-verify-the-SAML-toke.patch
-# For RHEL-2446 - [RHEL9.3][ESXi]Latest version of open-vm-tools breaks VM backups
-Patch2: ovt-Provide-alternate-method-to-allow-expected-pre-froze.patch
-# For RHEL-14686 - CVE-2023-34059 open-vm-tools: file descriptor hijack vulnerability in the vmware-user-suid-wrapper [rhel-9.3.0]
-Patch3: ovt-File-descriptor-vulnerability-in-the-open-vm-tools-v.patch
-# For RHEL-14652 - CVE-2023-34058 open-vm-tools: SAML token signature bypass [rhel-9.3.0]
-Patch4: ovt-Don-t-accept-tokens-with-unrelated-certs.patch
+# Patches
+#Patch0:           <patch-name0>.patch
 
 BuildRequires:    autoconf
 BuildRequires:    automake
@@ -68,7 +59,12 @@ BuildRequires:    make
 BuildRequires:    gcc-c++
 BuildRequires:    doxygen
 # Fuse is optional and enables vmblock-fuse
+# Switching Fedora to use fuse3.   Red Hat to switch on their own schedule.
+%if 0%{?fedora} || 0%{?rhel} > 8
+BuildRequires:    fuse3-devel
+%else
 BuildRequires:    fuse-devel
+%endif
 BuildRequires:    glib2-devel >= 2.14.0
 BuildRequires:    libicu-devel
 BuildRequires:    libmspack-devel
@@ -95,7 +91,7 @@ BuildRequires:    gtk3-devel >= 3.10.0
 BuildRequires:    gtkmm30-devel >= 3.10.0
 BuildRequires:    libtirpc-devel
 BuildRequires:    rpcgen
-BuildRequires:    systemd-rpm-macros
+BuildRequires:    systemd-udev
 %else
 BuildRequires:    gtk2-devel >= 2.4.0
 BuildRequires:    gtkmm24-devel
@@ -103,7 +99,11 @@ BuildRequires:    systemd
 %endif
 
 Requires:         coreutils
+%if 0%{?fedora} || 0%{?rhel} > 8
+Requires:         fuse3
+%else
 Requires:         fuse
+%endif
 Requires:         iproute
 Requires:         grep
 Requires:         pciutils
@@ -416,14 +416,23 @@ fi
 
 %files test
 %{_bindir}/vmware-vgauth-smoketest
+
 %changelog
-* Thu Nov 02 2023 Miroslav Rezanina <mrezanin@redhat.com> - 12.2.5-3.el9_3.2
-- ovt-File-descriptor-vulnerability-in-the-open-vm-tools-v.patch [RHEL-14686]
-- ovt-Don-t-accept-tokens-with-unrelated-certs.patch [RHEL-14652]
-- Resolves: RHEL-14686
-  (CVE-2023-34059 open-vm-tools: file descriptor hijack vulnerability in the vmware-user-suid-wrapper [rhel-9.3.0])
-- Resolves: RHEL-14652
-  (CVE-2023-34058 open-vm-tools: SAML token signature bypass [rhel-9.3.0])
+* Mon Dec 04 2023 Miroslav Rezanina <mrezanin@redhat.com> - 12.3.5-2
+- ovt-Restart-tools-on-failure.patch [RHEL-15346]
+- Resolves: RHEL-15346
+  (Add Restart=on-failure to vmtoolsd.service)
+
+* Thu Nov 09 2023 Miroslav Rezanina <mrezanin@redhat.com> - 12.3.5-1
+- Rebase to 12.3.5-1 [RHEL-15058]
+- Fixed CVE-2023-34058 [RHEL-14653]
+- Fixed CVE-2023-34059 [RHEL-14687]
+- Resolves: RHEL-15058
+  ([ESXi][RHEL9]open-vm-tools version 12.3.5 has been released - please rebase)
+- Resolves: RHEL-14653
+  (CVE-2023-34058 open-vm-tools: SAML token signature bypass [rhel-9.4.0])
+- Resolves: RHEL-14687
+  (CVE-2023-34059 open-vm-tools: file descriptor hijack vulnerability in the vmware-user-suid-wrapper [rhel-9.4.0])
 
 * Fri Sep 22 2023 Miroslav Rezanina <mrezanin@redhat.com> - 12.2.5-3
 - ovt-Provide-alternate-method-to-allow-expected-pre-froze.patch [RHEL-2446]
