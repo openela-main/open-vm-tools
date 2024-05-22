@@ -19,9 +19,9 @@
 ################################################################################
 
 %global _hardened_build 1
-%global majorversion    12.2
+%global majorversion    12.3
 %global minorversion    5
-%global toolsbuild      21855600
+%global toolsbuild      22544099
 %global toolsversion    %{majorversion}.%{minorversion}
 %global toolsdaemon     vmtoolsd
 %global vgauthdaemon    vgauthd
@@ -32,7 +32,7 @@
 
 Name:             open-vm-tools
 Version:          %{toolsversion}
-Release:          3%{?dist}.1
+Release:          2%{?dist}
 Summary:          Open Virtual Machine Tools for virtual machines hosted on VMware
 License:          GPLv2
 URL:              https://github.com/vmware/%{name}
@@ -52,14 +52,6 @@ ExclusiveArch:    %{ix86} x86_64 aarch64
 %endif
 
 # Patch0: name.patch
-# For bz#2236543 - CVE-2023-20900 open-vm-tools: SAML token signature bypass [rhel-8]
-Patch1: ovt-VGAuth-Allow-only-X509-certs-to-verify-the-SAML-toke.patch
-# For RHEL-2447 - [RHEL8.9][ESXi]Latest version of open-vm-tools breaks VM backups
-Patch2: ovt-Provide-alternate-method-to-allow-expected-pre-froze.patch
-# For RHEL-14648 - CVE-2023-34058 open-vm-tools: SAML token signature bypass [rhel-8.9.0]
-Patch3: ovt-Don-t-accept-tokens-with-unrelated-certs.patch
-# For RHEL-14682 - CVE-2023-34059 open-vm-tools: file descriptor hijack vulnerability in the vmware-user-suid-wrapper [rhel-8.9.0]
-Patch4: ovt-File-descriptor-vulnerability-in-the-open-vm-tools-v.patch
 
 BuildRequires:    autoconf
 BuildRequires:    automake
@@ -95,7 +87,7 @@ BuildRequires:    gtk3-devel >= 3.10.0
 BuildRequires:    gtkmm30-devel >= 3.10.0
 BuildRequires:    libtirpc-devel
 BuildRequires:    rpcgen
-BuildRequires:    systemd-rpm-macros
+BuildRequires:    systemd-udev
 %else
 BuildRequires:    gtk2-devel >= 2.4.0
 BuildRequires:    gtkmm24-devel
@@ -418,23 +410,31 @@ fi
 %{_bindir}/vmware-vgauth-smoketest
 
 %changelog
-* Thu Nov 02 2023 Miroslav Rezanina <mrezanin@redhat.com> - 12.2.5-3.el8_9.1
-- ovt-Don-t-accept-tokens-with-unrelated-certs.patch [RHEL-14648]
-- ovt-File-descriptor-vulnerability-in-the-open-vm-tools-v.patch [RHEL-14682]
-- Resolves: RHEL-14648
-  (CVE-2023-34058 open-vm-tools: SAML token signature bypass [rhel-8.9.0])
-- Resolves: RHEL-14682
-  (CVE-2023-34059 open-vm-tools: file descriptor hijack vulnerability in the vmware-user-suid-wrapper [rhel-8.9.0])
+* Wed Dec 06 2023 Miroslav Rezanina <mrezanin@redhat.com> - 12.3.5-2
+- ovt-Restart-tools-on-failure.patch [RHEL-17683]
+- Resolves: RHEL-17683
+  (Add Restart=on-failure to vmtoolsd.service [rhel-8])
 
-* Thu Sep 28 2023 Jon Maloy <jmaloy@redhat.com> - 12.2.5-3.el8_9
-- ovt-Provide-alternate-method-to-allow-expected-pre-froze.patch [RHEL-2447]
-- Resolves: RHEL-2447
-  ([RHEL8.9][ESXi]Latest version of open-vm-tools breaks VM backups)
+* Thu Nov 09 2023 Miroslav Rezanina <mrezanin@redhat.com> - 12.3.5-1
+- Rebase to 12.3.5 [RHEL-15059]
+- Fix CVE-2023-34058 [RHEL-14649]
+- Fix CVE-2023-34059 [RHEL-14683]
+- Resolves: RHEL-15059
+  ([ESXi][RHEL8]open-vm-tools version 12.3.5 has been released - please rebase)
+- Resolves: RHEL-14649
+  (CVE-2023-34058 open-vm-tools: SAML token signature bypass [rhel-8.10.0])
+- Resolves: RHEL-14683
+  (CVE-2023-34059 open-vm-tools: file descriptor hijack vulnerability in the vmware-user-suid-wrapper [rhel-8.10.0])
 
-* Sun Sep 17 2023 Miroslav Rezanina <mrezanin@redhat.com> - 12.2.5-2.el8_9
-- ovt-VGAuth-Allow-only-X509-certs-to-verify-the-SAML-toke.patch [bz#2236543]
-- Resolves: bz#2236543
-  (CVE-2023-20900 open-vm-tools: SAML token signature bypass [rhel-8])
+* Wed Sep 27 2023 Jon Maloy <jmaloy@redhat.com> - 12.2.5-4
+- ovt-Provide-alternate-method-to-allow-expected-pre-froze.patch [RHEL-7012]
+- Resolves: RHEL-7012
+  ([RHEL8.10][ESXi]Latest version of open-vm-tools breaks VM backups)
+
+* Wed Sep 20 2023 Miroslav Rezanina <mrezanin@redhat.com> - 12.2.5-3
+- Rebuild CVE-2023-20900 for 8.10
+- Resolves: RHEL-4584
+  (CVE-2023-20900 open-vm-tools: SAML token signature bypass [rhel-8.10.0])
 
 * Tue Jul 11 2023 Miroslav Rezanina <mrezanin@redhat.com> - 12.2.5-1
 - Rebase to open-vm-tools 12.2.5 [bz#2214861]

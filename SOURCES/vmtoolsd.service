@@ -6,10 +6,13 @@ Requires=vgauthd.service
 After=vgauthd.service
 DefaultDependencies=no
 Before=cloud-init-local.service
+StartLimitIntervalSec=30
+StartLimitBurst=3
 
 [Service]
 ExecStart=/usr/bin/vmtoolsd
 TimeoutStopSec=5
+Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target
