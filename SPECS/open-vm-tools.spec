@@ -18,9 +18,9 @@
 ### Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ################################################################################
 
-%global majorversion    12.3
-%global minorversion    5
-%global toolsbuild      22544099
+%global majorversion    12.4
+%global minorversion    0
+%global toolsbuild      23259341
 %global toolsversion    %{majorversion}.%{minorversion}
 %global toolsdaemon     vmtoolsd
 %global vgauthdaemon    vgauthd
@@ -114,6 +114,8 @@ Requires:         util-linux
 Requires:         which
 # xmlsec1-openssl needs to be added explicitly
 Requires:         xmlsec1-openssl
+# DeployPkg pluggin require dbus-uuidgen
+Requires:         dbus-tools
 
 # open-vm-tools >= 10.0.0 do not require open-vm-tools-deploypkg provided by
 # VMware. That functionality is now available as part of open-vm-tools package
@@ -418,6 +420,16 @@ fi
 %{_bindir}/vmware-vgauth-smoketest
 
 %changelog
+* Mon May 20 2024 Miroslav Rezanina <mrezanin@redhat.com> - 12.4.0-2
+- ovt-Require-dbus-tools.patch [RHEL-35543]
+- Resolves: RHEL-35543
+  ([ESXi][open-vm-tools]The open-vm-tools should depend on dbus-tools)
+
+* Thu Apr 18 2024 Miroslav Rezanina <mrezanin@redhat.com> - 12.4.0-1
+- Rebase to 12.4.0 [RHEL-30341
+- Resolves: RHEL-30341
+  ([ESXi][RHEL9]open-vm-tools version 12.4.0 has been released - please rebase)
+
 * Mon Dec 04 2023 Miroslav Rezanina <mrezanin@redhat.com> - 12.3.5-2
 - ovt-Restart-tools-on-failure.patch [RHEL-15346]
 - Resolves: RHEL-15346
