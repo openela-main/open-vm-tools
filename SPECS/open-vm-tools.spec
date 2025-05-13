@@ -18,9 +18,9 @@
 ### Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ################################################################################
 
-%global majorversion    12.4
+%global majorversion    12.5
 %global minorversion    0
-%global toolsbuild      23259341
+%global toolsbuild      24276846
 %global toolsversion    %{majorversion}.%{minorversion}
 %global toolsdaemon     vmtoolsd
 %global vgauthdaemon    vgauthd
@@ -31,7 +31,7 @@
 
 Name:             open-vm-tools
 Version:          %{toolsversion}
-Release:          2%{?dist}
+Release:          1%{?dist}
 Summary:          Open Virtual Machine Tools for virtual machines hosted on VMware
 License:          GPLv2
 URL:              https://github.com/vmware/%{name}
@@ -420,6 +420,16 @@ fi
 %{_bindir}/vmware-vgauth-smoketest
 
 %changelog
+* Tue Dec 03 2024 Miroslav Rezanina <mrezanin@redhat.com> - 12.5.0-1
+- Rebase to 12.5.0 [RHEL-63096]
+- Resolves: RHEL-63096
+  ([ESXi][RHEL9] open-vm-tools version 12.5.0 has been released - please rebase)
+
+* Thu Sep 12 2024 Miroslav Rezanina <mrezanin@redhat.com> - 12.4.5-1
+- Rebase to 12.4.5 [RHEL-45547]
+- Resolves: RHEL-45547
+  ([ESXi][RHEL9] open-vm-tools version 12.4.5 has been released - please rebase)
+
 * Mon May 20 2024 Miroslav Rezanina <mrezanin@redhat.com> - 12.4.0-2
 - ovt-Require-dbus-tools.patch [RHEL-35543]
 - Resolves: RHEL-35543
