@@ -31,7 +31,7 @@
 
 Name:             open-vm-tools
 Version:          %{toolsversion}
-Release:          1%{?dist}
+Release:          1%{?dist}.1
 Summary:          Open Virtual Machine Tools for virtual machines hosted on VMware
 %if 0%{?bundle_gtkmm3}
 # atkmm: LGPL-2.1-or-later
@@ -78,6 +78,8 @@ ExclusiveArch:    %{ix86} x86_64 aarch64
 
 # Patches
 #Patch0:           <patch-name0>.patch
+# For RHEL-117381 - [CISA Major Incident] CVE-2025-41244 open-vm-tools: Local privilege escalation in open-vm-tools [rhel-10.0.z]
+Patch1: ovt-Address-CVE-2025-41244.patch
 
 BuildRequires:    autoconf
 BuildRequires:    automake
@@ -620,6 +622,11 @@ fi
 %{_bindir}/vmware-vgauth-smoketest
 
 %changelog
+* Mon Oct 06 2025 Miroslav Rezanina <mrezanin@redhat.com> - 12.5.0-1.el10_0.1
+- ovt-Address-CVE-2025-41244.patch [RHEL-117381]
+- Resolves: RHEL-117381
+  ([CISA Major Incident] CVE-2025-41244 open-vm-tools: Local privilege escalation in open-vm-tools [rhel-10.0.z])
+
 * Tue Dec 03 2024 Miroslav Rezanina <mrezanin@redhat.com> - 12.5.0-1
 - Rebase to 12.5.0 [RHEL-63092]
 - Resolves: RHEL-63092
