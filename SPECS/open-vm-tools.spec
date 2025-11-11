@@ -18,9 +18,9 @@
 ### Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ################################################################################
 
-%global majorversion    12.5
+%global majorversion    13.0
 %global minorversion    0
-%global toolsbuild      24276846
+%global toolsbuild      24696409
 %global toolsversion    %{majorversion}.%{minorversion}
 %global toolsdaemon     vmtoolsd
 %global vgauthdaemon    vgauthd
@@ -31,7 +31,7 @@
 
 Name:             open-vm-tools
 Version:          %{toolsversion}
-Release:          1%{?dist}.2
+Release:          1%{?dist}.1
 Summary:          Open Virtual Machine Tools for virtual machines hosted on VMware
 License:          GPLv2
 URL:              https://github.com/vmware/%{name}
@@ -51,7 +51,7 @@ ExclusiveArch:    %{ix86} x86_64 aarch64
 
 # Patches
 #Patch0:           <patch-name0>.patch
-# For RHEL-117390 - [CISA Major Incident] CVE-2025-41244 open-vm-tools: Local privilege escalation in open-vm-tools [rhel-9.6.z]
+# For RHEL-117395 - [CISA Major Incident] CVE-2025-41244 open-vm-tools: Local privilege escalation in open-vm-tools [rhel-9.7]
 Patch1: ovt-Address-CVE-2025-41244.patch
 
 BuildRequires:    autoconf
@@ -422,11 +422,16 @@ fi
 %{_bindir}/vmware-vgauth-smoketest
 
 %changelog
-* Mon Oct 06 2025 Miroslav Rezanina <mrezanin@redhat.com> - 12.5.0-1.el9_6.2
-- ovt-Address-CVE-2025-41244.patch [RHEL-117390]
-- Resolves: RHEL-117390
-  ([CISA Major Incident] CVE-2025-41244 open-vm-tools: Local privilege escalation in open-vm-tools [rhel-9.6.z])
+* Fri Oct 03 2025 Miroslav Rezanina <mrezanin@redhat.com> - 13.0.0-1.el9_7.1
+- ovt-Address-CVE-2025-41244.patch [RHEL-117395]
+- Resolves: RHEL-117395
+  ([CISA Major Incident] CVE-2025-41244 open-vm-tools: Local privilege escalation in open-vm-tools [rhel-9.7])
 
+* Fri Jul 25 2025 Lili Du <ldu@redhat.com> - 13.0.0-1
+- Rebase to 13.0.0 [RHEL-99158]
+- Resolves: RHEL-99158 
+  ([ESXi][RHEL9] open-vm-tools version 13.0.0 has been released - please rebase)
+  
 * Tue Dec 03 2024 Miroslav Rezanina <mrezanin@redhat.com> - 12.5.0-1
 - Rebase to 12.5.0 [RHEL-63096]
 - Resolves: RHEL-63096
