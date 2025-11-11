@@ -18,9 +18,9 @@
 ### Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ################################################################################
 
-%global majorversion    12.5
+%global majorversion    13.0
 %global minorversion    0
-%global toolsbuild      24276846
+%global toolsbuild      24696409
 %global toolsversion    %{majorversion}.%{minorversion}
 %global toolsdaemon     vmtoolsd
 %global vgauthdaemon    vgauthd
@@ -78,8 +78,10 @@ ExclusiveArch:    %{ix86} x86_64 aarch64
 
 # Patches
 #Patch0:           <patch-name0>.patch
-# For RHEL-117381 - [CISA Major Incident] CVE-2025-41244 open-vm-tools: Local privilege escalation in open-vm-tools [rhel-10.0.z]
+# For RHEL-117383 - [CISA Major Incident] CVE-2025-41244 open-vm-tools: Local privilege escalation in open-vm-tools [rhel-10.1]
 Patch1: ovt-Address-CVE-2025-41244.patch
+# Fix build when compiling with -std=c23 (GCC 15)
+#Patch1:           https://github.com/vmware/open-vm-tools/pull/751.patch
 
 BuildRequires:    autoconf
 BuildRequires:    automake
@@ -227,8 +229,6 @@ machines.
 %build
 %if 0%{?bundle_gtkmm3}
 export PATH="%{_buildrootdir}/bin:$PATH"
-# Cleanup buildroot for existing rpms
-rm -rf %{_buildrootdir}/*
 
 function install_rpms_to_current_dir() {
     PACKAGE_RPM=$(eval echo $1)
@@ -251,6 +251,13 @@ function install_rpms_to_current_dir() {
      done
 }
 
+rpmbuild_bundled() {
+    rpmbuild --nodeps \
+             --define '_prefix %{bundled_install_path}' \
+             --define '__perl /usr/bin/perl' \
+             $@
+}
+
 export LDFLAGS="-L%{_buildrootdir}%{bundled_install_path}/%{_lib} $LDFLAGS"
 export LDFLAGS="-Wl,-rpath,%{bundled_install_path}/%{_lib} $LDFLAGS"
 export LDFLAGS="-Wl,-rpath-link,%{_buildrootdir}%{bundled_install_path}/%{_lib} $LDFLAGS"
@@ -259,7 +266,7 @@ export PATH="%{_buildrootdir}%{bundled_install_path}/bin:$PATH"
 
 # libsigc++20
 rpm -ivh %{SOURCE101}
-rpmbuild --nodeps --define '_prefix %{bundled_install_path}' -ba %{_specdir}/libsigc++20.spec
+rpmbuild_bundled -ba %{_specdir}/libsigc++20.spec
 pushd %{_buildrootdir}
 install_rpms_to_current_dir libsigc++20*.rpm
 popd
@@ -269,7 +276,7 @@ sed -i 's@prefix=%{bundled_install_path}@prefix=%{_buildrootdir}%{bundled_instal
 
 # glibmm2.4
 rpm -ivh %{SOURCE102}
-rpmbuild --nodeps --define '_prefix %{bundled_install_path}' -ba %{_specdir}/glibmm2.4.spec
+rpmbuild_bundled -ba %{_specdir}/glibmm2.4.spec
 pushd %{_buildrootdir}
 install_rpms_to_current_dir glibmm2.4*.rpm
 popd
@@ -279,7 +286,7 @@ sed -i 's@prefix=%{bundled_install_path}@prefix=%{_buildrootdir}%{bundled_instal
 
 # atkmm
 rpm -ivh %{SOURCE103}
-rpmbuild --nodeps --define '_prefix %{bundled_install_path}' -ba %{_specdir}/atkmm.spec
+rpmbuild_bundled -ba %{_specdir}/atkmm.spec
 pushd %{_buildrootdir}
 install_rpms_to_current_dir atkmm*.rpm
 popd
@@ -289,7 +296,7 @@ sed -i 's@prefix=%{bundled_install_path}@prefix=%{_buildrootdir}%{bundled_instal
 
 # cairomm
 rpm -ivh %{SOURCE104}
-rpmbuild --nodeps --define '_prefix %{bundled_install_path}' --without=doc_pdf -ba %{_specdir}/cairomm.spec
+rpmbuild_bundled --without=doc_pdf -ba %{_specdir}/cairomm.spec
 pushd %{_buildrootdir}
 install_rpms_to_current_dir cairomm*.rpm
 popd
@@ -299,7 +306,7 @@ sed -i 's@prefix=%{bundled_install_path}@prefix=%{_buildrootdir}%{bundled_instal
 
 # pangomm
 rpm -ivh %{SOURCE105}
-rpmbuild --nodeps --define '_prefix %{bundled_install_path}' -ba %{_specdir}/pangomm.spec
+rpmbuild_bundled -ba %{_specdir}/pangomm.spec
 pushd %{_buildrootdir}
 install_rpms_to_current_dir pangomm*.rpm
 popd
@@ -309,7 +316,7 @@ sed -i 's@prefix=%{bundled_install_path}@prefix=%{_buildrootdir}%{bundled_instal
 
 # gtkmm3.0
 rpm -ivh %{SOURCE106}
-rpmbuild --nodeps --define '_prefix %{bundled_install_path}' -ba %{_specdir}/gtkmm3.0.spec
+rpmbuild_bundled -ba %{_specdir}/gtkmm3.0.spec
 pushd %{_buildrootdir}
 install_rpms_to_current_dir gtkmm*.rpm
 popd
@@ -419,9 +426,6 @@ sed -i "s|^Encoding.*$||g" %{buildroot}%{_sysconfdir}/xdg/autostart/vmware-user.
 find %{buildroot}%{_libdir} -name '*.la' -delete
 rm -fr %{buildroot}%{_defaultdocdir}
 rm -f docs/api/build/html/FreeSans.ttf
-
-# Remove mount.vmhgfs & symlink
-rm -fr %{buildroot}%{_sbindir} %{buildroot}/sbin/mount.vmhgfs
 
 # Systemd unit files
 install -p -m 644 -D %{SOURCE1} %{buildroot}%{_unitdir}/%{toolsdaemon}.service
@@ -622,10 +626,15 @@ fi
 %{_bindir}/vmware-vgauth-smoketest
 
 %changelog
-* Mon Oct 06 2025 Miroslav Rezanina <mrezanin@redhat.com> - 12.5.0-1.el10_0.1
-- ovt-Address-CVE-2025-41244.patch [RHEL-117381]
-- Resolves: RHEL-117381
-  ([CISA Major Incident] CVE-2025-41244 open-vm-tools: Local privilege escalation in open-vm-tools [rhel-10.0.z])
+* Fri Oct 03 2025 Miroslav Rezanina <mrezanin@redhat.com> - 13.0.0-1.el10_1.1
+- ovt-Address-CVE-2025-41244.patch [RHEL-117383]
+- Resolves: RHEL-117383
+  ([CISA Major Incident] CVE-2025-41244 open-vm-tools: Local privilege escalation in open-vm-tools [rhel-10.1])
+
+* Thu Jul 24 2025 Bo Yang <boyang@redhat.com> - 13.0.0-1
+- Rebase to 13.0.0 [RHEL-99156]
+- Resolves: RHEL-99156
+  ([ESXi][RHEL10] open-vm-tools version 13.0.0 has been released - please rebase)
 
 * Tue Dec 03 2024 Miroslav Rezanina <mrezanin@redhat.com> - 12.5.0-1
 - Rebase to 12.5.0 [RHEL-63092]
