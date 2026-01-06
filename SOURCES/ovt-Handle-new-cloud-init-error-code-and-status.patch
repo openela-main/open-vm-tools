@@ -1,0 +1,74 @@
+From 0c50cb41fb5dd9c84d6a1efe880a1ebb618f9356 Mon Sep 17 00:00:00 2001
+From: Pengpeng Sun <pengpeng.sun@broadcom.com>
+Date: Wed, 27 Aug 2025 14:19:58 +0800
+Subject: [PATCH] Handle new cloud-init error code and status
+
+RH-Author: Ani Sinha <anisinha@redhat.com>
+RH-MergeRequest: 66: Handle new cloud-init error code and status
+RH-Jira: RHEL-114958
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: xiachen <xiachen@redhat.com>
+RH-Commit: [1/1] bbb640f7b2ce99bddf512f5064e38bec718134f9
+
+ - A new error code [1] was introduced in cloud-init v23.4, RedHat team reported
+that our OVT code shall handle this new error code properly, see
+https://github.com/vmware/open-vm-tools/issues/768.
+This change follows the backwards-compatible way in
+https://cloudinit.readthedocs.io/en/latest/explanation/return_codes.html
+to check that the return code is not equal to 1.
+
+ - Running status has been changed from "not run" to "not started" in
+cloud-init v24.1, see details in
+https://github.com/canonical/cloud-init/commit/d175170aedc1398b85ac767573b8773a5a2e7c6f.
+This change adds "not started" match to CLOUDINIT_STATUS_NOT_RUN.
+
+This patch was sent by John Wolfe over email and is available upstream here:
+https://github.com/vmware/open-vm-tools/blob/Handle-new-cloud-init-error-code.patch/
+
+It addresses open-vm-tools issue https://github.com/vmware/open-vm-tools/issues/768
+
+This change has been tested internally by Amy Chen and is seen to fix the
+original issue.
+
+1. https://cloudinit.readthedocs.io/en/latest/explanation/failure_states.html#error-codes
+
+Signed-off-by: Ani Sinha <anisinha@redhat.com>
+---
+ open-vm-tools/libDeployPkg/linuxDeployment.c | 10 +++++++---
+ 1 file changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/open-vm-tools/libDeployPkg/linuxDeployment.c b/open-vm-tools/libDeployPkg/linuxDeployment.c
+index 44cac8ef..82e83957 100644
+--- a/open-vm-tools/libDeployPkg/linuxDeployment.c
++++ b/open-vm-tools/libDeployPkg/linuxDeployment.c
+@@ -1313,6 +1313,7 @@ static CLOUDINIT_STATUS_CODE
+ GetCloudinitStatus() {
+    // Cloud-init execution status messages
+    static const char* NOT_RUN = "not run";
++   static const char* NOT_STARTED = "not started";
+    static const char* RUNNING = "running";
+    static const char* DONE = "done";
+    static const char* ERROR = "error";
+@@ -1326,13 +1327,16 @@ GetCloudinitStatus() {
+                                            false,
+                                            cloudinitStatusCmdOutput,
+                                            MAX_LENGTH_CLOUDINIT_STATUS);
+-   if (forkExecResult != 0) {
+-      sLog(log_info, "Unable to get cloud-init status.");
+-      return CLOUDINIT_STATUS_UNKNOWN;
++   if (forkExecResult == 1) {
++      sLog(log_info, "Cloud-init experienced unrecoverable error.");
++      return CLOUDINIT_STATUS_ERROR;
+    } else {
+       if (strstr(cloudinitStatusCmdOutput, NOT_RUN) != NULL) {
+          sLog(log_info, "Cloud-init status is '%s'.", NOT_RUN);
+          return CLOUDINIT_STATUS_NOT_RUN;
++      } else if (strstr(cloudinitStatusCmdOutput, NOT_STARTED) != NULL) {
++         sLog(log_info, "Cloud-init status is '%s'.", NOT_STARTED);
++         return CLOUDINIT_STATUS_NOT_RUN;
+       } else if (strstr(cloudinitStatusCmdOutput, RUNNING) != NULL) {
+          sLog(log_info, "Cloud-init status is '%s'.", RUNNING);
+          return CLOUDINIT_STATUS_RUNNING;
+-- 
+2.47.3
+
