@@ -32,7 +32,7 @@
 
 Name:             open-vm-tools
 Version:          %{toolsversion}
-Release:          2%{?dist}.1
+Release:          2%{?dist}.2
 Summary:          Open Virtual Machine Tools for virtual machines hosted on VMware
 License:          GPLv2
 URL:              https://github.com/vmware/%{name}
@@ -54,6 +54,8 @@ ExclusiveArch:    %{ix86} x86_64 aarch64
 # Patch0: name.patch
 # For RHEL-117388 - [CISA Major Incident] CVE-2025-41244 open-vm-tools: Local privilege escalation in open-vm-tools [rhel-8.10.z]
 Patch1: ovt-SDMP-Service-Discovery-Plugin.patch
+# For RHEL-129361 - Backport of CVE-2025-22247 to 8.10
+Patch2: ovt-Validate-user-names-and-file-paths.patch
 
 BuildRequires:    autoconf
 BuildRequires:    automake
@@ -412,6 +414,11 @@ fi
 %{_bindir}/vmware-vgauth-smoketest
 
 %changelog
+* Tue Jan 06 2026 Miroslav Rezanina <mrezanin@redhat.com> - 12.3.5-2.el8_10.2
+- ovt-Validate-user-names-and-file-paths.patch [RHEL-129361]
+- Resolves: RHEL-129361
+  (Backport of CVE-2025-22247 to 8.10)
+
 * Tue Oct 07 2025 Miroslav Rezanina <mrezanin@redhat.com> - 12.3.5-2.el8.1
 - ovt-SDMP-Service-Discovery-Plugin.patch [RHEL-117388]
 - Resolves: RHEL-117388
