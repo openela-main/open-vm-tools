@@ -17,10 +17,9 @@
 ### along with this program; if not, write to the Free Software
 ### Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ################################################################################
-
 %global majorversion    13.0
-%global minorversion    0
-%global toolsbuild      24696409
+%global minorversion    10
+%global toolsbuild      25056151
 %global toolsversion    %{majorversion}.%{minorversion}
 %global toolsdaemon     vmtoolsd
 %global vgauthdaemon    vgauthd
@@ -31,7 +30,7 @@
 
 Name:             open-vm-tools
 Version:          %{toolsversion}
-Release:          1%{?dist}.1
+Release:          1%{?dist}
 Summary:          Open Virtual Machine Tools for virtual machines hosted on VMware
 License:          GPLv2
 URL:              https://github.com/vmware/%{name}
@@ -51,8 +50,6 @@ ExclusiveArch:    %{ix86} x86_64 aarch64
 
 # Patches
 #Patch0:           <patch-name0>.patch
-# For RHEL-117395 - [CISA Major Incident] CVE-2025-41244 open-vm-tools: Local privilege escalation in open-vm-tools [rhel-9.7]
-Patch1: ovt-Address-CVE-2025-41244.patch
 
 BuildRequires:    autoconf
 BuildRequires:    automake
@@ -422,10 +419,20 @@ fi
 %{_bindir}/vmware-vgauth-smoketest
 
 %changelog
-* Fri Oct 03 2025 Miroslav Rezanina <mrezanin@redhat.com> - 13.0.0-1.el9_7.1
-- ovt-Address-CVE-2025-41244.patch [RHEL-117395]
-- Resolves: RHEL-117395
-  ([CISA Major Incident] CVE-2025-41244 open-vm-tools: Local privilege escalation in open-vm-tools [rhel-9.7])
+* Thu Feb 12 2026 Lili Du <ldu@redhat.com> - 13.0.5-1
+- Rebase to 13.0.10 [RHEL-144578]
+- Resolves: RHEL-144578
+  ([ESXi][RHEL9] open-vm-tools version 13.0.10 has been released - please rebase)
+
+* Thu Nov 06 2025 Lili Du <ldu@redhat.com> - 13.0.5-1
+- Rebase to 13.0.5 [RHEL-118505]
+- Resolves: RHEL-118505
+  ([ESXi][RHEL9] open-vm-tools version 13.0.5 has been released - please rebase)
+
+* Mon Oct 06 2025 Miroslav Rezanina <mrezanin@redhat.com> - 13.0.0-2
+- ovt-Address-CVE-2025-41244.patch [RHEL-117392]
+- Resolves: RHEL-117392
+  ([CISA Major Incident] CVE-2025-41244 open-vm-tools: Local privilege escalation in open-vm-tools [rhel-9.8])
 
 * Fri Jul 25 2025 Lili Du <ldu@redhat.com> - 13.0.0-1
 - Rebase to 13.0.0 [RHEL-99158]
