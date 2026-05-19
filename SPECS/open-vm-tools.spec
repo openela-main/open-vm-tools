@@ -19,8 +19,8 @@
 ################################################################################
 
 %global majorversion    13.0
-%global minorversion    0
-%global toolsbuild      24696409
+%global minorversion    10
+%global toolsbuild      25056151
 %global toolsversion    %{majorversion}.%{minorversion}
 %global toolsdaemon     vmtoolsd
 %global vgauthdaemon    vgauthd
@@ -31,7 +31,7 @@
 
 Name:             open-vm-tools
 Version:          %{toolsversion}
-Release:          1%{?dist}.2
+Release:          1%{?dist}
 Summary:          Open Virtual Machine Tools for virtual machines hosted on VMware
 %if 0%{?bundle_gtkmm3}
 # atkmm: LGPL-2.1-or-later
@@ -78,12 +78,6 @@ ExclusiveArch:    %{ix86} x86_64 aarch64
 
 # Patches
 #Patch0:           <patch-name0>.patch
-# For RHEL-117383 - [CISA Major Incident] CVE-2025-41244 open-vm-tools: Local privilege escalation in open-vm-tools [rhel-10.1]
-Patch1: ovt-Address-CVE-2025-41244.patch
-# For RHEL-114958 - Cloud-init receives TERM signal from PID 1 in the middle of running user data [rhel-10.1.z]
-Patch2: ovt-Handle-new-cloud-init-error-code-and-status.patch
-# Fix build when compiling with -std=c23 (GCC 15)
-#Patch1:           https://github.com/vmware/open-vm-tools/pull/751.patch
 
 BuildRequires:    autoconf
 BuildRequires:    automake
@@ -628,15 +622,23 @@ fi
 %{_bindir}/vmware-vgauth-smoketest
 
 %changelog
-* Fri Oct 31 2025 Miroslav Rezanina <mrezanin@redhat.com> - 13.0.0-1.el10_1.2
-- ovt-Handle-new-cloud-init-error-code-and-status.patch [RHEL-114958]
-- Resolves: RHEL-114958
-  (Cloud-init receives TERM signal from PID 1 in the middle of running user data [rhel-10.1.z])
+* Mon Feb 16 2026 Bo Yang <boyang@redhat.com> - 13.0.10-1
+- Rebase to 13.0.10 [RHEL-144577]
+- Resolves: RHEL-144577
+  ([ESXi][RHEL10] open-vm-tools version 13.0.10 has been released - please rebase)
 
-* Fri Oct 03 2025 Miroslav Rezanina <mrezanin@redhat.com> - 13.0.0-1.el10_1.1
-- ovt-Address-CVE-2025-41244.patch [RHEL-117383]
-- Resolves: RHEL-117383
-  ([CISA Major Incident] CVE-2025-41244 open-vm-tools: Local privilege escalation in open-vm-tools [rhel-10.1])
+* Mon Nov 03 2025 Bo Yang <boyang@redhat.com> - 13.0.5-1
+- Rebase to 13.0.5 [RHEL-118504]
+- Resolves: RHEL-118504
+  ([ESXi][RHEL10] open-vm-tools version 13.0.5 has been released - please rebase)
+
+* Mon Oct 06 2025 Miroslav Rezanina <mrezanin@redhat.com> - 13.0.0-2
+- ovt-Handle-new-cloud-init-error-code-and-status.patch [RHEL-99781]
+- ovt-Address-CVE-2025-41244.patch [RHEL-117382]
+- Resolves: RHEL-99781
+  (Cloud-init receives TERM signal from PID 1 in the middle of running user data [rhel-10])
+- Resolves: RHEL-117382
+  ([CISA Major Incident] CVE-2025-41244 open-vm-tools: Local privilege escalation in open-vm-tools [rhel-10.2])
 
 * Thu Jul 24 2025 Bo Yang <boyang@redhat.com> - 13.0.0-1
 - Rebase to 13.0.0 [RHEL-99156]
